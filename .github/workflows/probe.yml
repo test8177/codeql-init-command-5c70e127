@@ -1,0 +1,34 @@
+name: codeql-init-command-boundary
+on:
+  workflow_dispatch:
+    inputs:
+      controlled_source_root:
+        required: true
+        type: string
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - id: init
+        continue-on-error: true
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066
+        with:
+          languages: python
+          build-mode: none
+          source-root: ${{ inputs.controlled_source_root }}
+      - name: Exact benign output oracle
+        if: always()
+        shell: python
+        env:
+          CODEQL_PROBE: ${{ steps.init.outputs.codeql_probe }}
+          CODEQL_OUTCOME: ${{ steps.init.outcome }}
+        run: |
+          import os
+          value = os.environ.get("CODEQL_PROBE", "")
+          print("CODEQL_OUTPUT_PRESENT=" + ("1" if value else "0"))
+          print("CODEQL_OUTPUT_MATCH=" + ("1" if value == "LIVE" else "0"))
+          print("CODEQL_STEP_TERMINAL=" + ("1" if os.environ.get("CODEQL_OUTCOME") in ("success", "failure") else "0"))
